@@ -22,11 +22,20 @@ MarketLab 不是「預測 BTC 漲跌」的專案，而是一個**不會欺騙自
 ```bash
 # 需要 Python 3.11+
 python -m venv .venv
-.\.venv\Scripts\pip install -e ".[dev]"     # Windows
-# source .venv/bin/activate && pip install -e ".[dev]"   # macOS/Linux
+.\.venv\Scripts\pip install -e ".[dev,dashboard]"   # Windows
+# source .venv/bin/activate && pip install -e ".[dev,dashboard]"   # macOS/Linux
 
 pytest            # 執行測試
 ruff check .      # lint
+
+# 資料管線 + 研究報告（真實 OKX 公開資料）
+python -m marketlab download --inst BTC-USDT --bar 1m --days 2
+python -m marketlab normalize --inst BTC-USDT --bar 1m
+python -m marketlab report --inst BTC-USDT --bar 1m
+python -m marketlab live --seconds 10          # WebSocket 即時串流
+
+# Dashboard v1（Streamlit）
+streamlit run app/dashboard.py
 ```
 
 ## 專案結構

@@ -11,11 +11,11 @@
 
 | 項目 | 狀態 |
 | --- | --- |
-| 目前階段 | **Phase 0 Foundation ✅ 完成** |
-| 下一步 | Phase 1 BTC Market Explorer（WebSocket + 歷史下載）→ Phase 2 三層資料 |
-| 測試 | `41 passed`（pytest, 0.6s） |
+| 目前階段 | **Phase 0 ✅ Phase 1 ✅ Phase 2 ✅ 完成** |
+| 下一步 | Phase 5 Experiment Lab（實驗記錄/比較）；Dashboard 接即時 WS；Phase 7 per-regime 績效矩陣 |
+| 測試 | `71 passed`（pytest） |
 | Lint | `ruff check` All checks passed |
-| 實網驗證 | OKX 公開 API 端到端已通（ticker + 300 根 5m K 線 + Regime 判定） |
+| 實網驗證 | REST 分頁下載 2 天 1m K 線（2881 bars, 0 缺口）＋ WS 三頻道串流（ticker/trade/candle5m）＋ Streamlit 啟動 |
 | Git | branch `main` → `github.com/xujk0217/MarketLab`（帳號：gh CLI 已登入 xujk0217） |
 
 ---
@@ -32,9 +32,18 @@
 ## 常用指令
 
 ```powershell
-.venv\Scripts\python -m pytest        # 全部測試（期望：41 passed）
+.venv\Scripts\python -m pytest        # 全部測試（期望：71 passed）
 .venv\Scripts\python -m ruff check .  # lint（期望：All checks passed!）
-.venv\Scripts\python -m marketlab     # CLI 煙霧測試（印出版本）
+.venv\Scripts\python -m marketlab --version   # CLI 煙霧測試
+
+# 資料管線（真實網路）
+.venv\Scripts\python -m marketlab download --inst BTC-USDT --bar 1m --days 2
+.venv\Scripts\python -m marketlab normalize --inst BTC-USDT --bar 1m
+.venv\Scripts\python -m marketlab report --inst BTC-USDT --bar 1m
+.venv\Scripts\python -m marketlab live --seconds 10     # WS 三頻道即時串流
+
+# Dashboard（從 repo 根目錄執行；需先有 normalized 資料）
+.venv\Scripts\streamlit run app/dashboard.py
 ```
 
 ---
@@ -46,10 +55,16 @@
 | `src/marketlab/core/market_state.py` | `MarketState` 凍結 dataclass — Digital Twin 統一狀態向量，optional 欄位留給後續 phase 填充 | SPEC §18 |
 | `src/marketlab/core/regime.py` | `RuleBasedRegimeDetector`：EVENT_SHOCK→BREAKOUT→TREND→VOLATILITY→RANGE 階梯式分類，輸出 `RegimeResult(regime, confidence)` | SPEC §3–4 |
 | `src/marketlab/core/events.py` | `NewsEvent`(pydantic v2)、`EventType/Direction/Horizon/SourceTier` enum、`NEWS_EVENT_JSON_SCHEMA`（LLM 固定合約）、`effective_impact = impact×confidence×tier_weight` | SPEC §9–12 |
-| `src/marketlab/data/okx/client.py` | `OKXPublicClient`：ticker / candles / trades（僅公開端點），`transport=` 注入供 MockTransport 離線測試；business code ≠ "0" 時 raise `OKXError` | Phase 1 |
+| `src/marketlab/data/okx/client.py` | `OKXPublicClient`：ticker / candles / **history-candles**（分頁游標）/ trades（僅公開端點），`transport=` 注入供 MockTransport 離線測試；business code ≠ "0" 時 raise `OKXError` | Phase 1 |
+| `src/marketlab/data/okx/history.py` | `HistoryDownloader`：以 `after` 游標逐頁回溯抓取，停於短頁/起點；防停滯守衛 | Phase 2 |
+| `src/marketlab/data/store.py` | 三層儲存：Raw 不可變批次 parquet + `normalize()`（去重/OHLC 驗證/缺口報告）+ normalized 快取讀寫 | Phase 2 |
+| `src/marketlab/features/` | `build_features()`：log_return、realized_vol、volume_ratio、hl_range_pct、return_lag{N}（純 trailing window，無 lookahead） | Phase 2 |
+| `src/marketlab/data/okx/ws.py` | `OKXWebSocketClient`：**雙端點並行**——tickers/trades 走 `/ws/v5/public`、candle 走 `/ws/v5/business`（預組合名稱如 `candle5m`）；指數退避重連＋20s 心跳；連線工廠可注入離線測試 | Phase 1 |
+| `src/marketlab/__main__.py` | CLI 子命令：`download / normalize / report / live`（argparse） | Phase 1 |
+| `app/dashboard.py` | Streamlit Dashboard v1：K線＋成交量圖、Regime 卡片與滾動時間軸、Features 線圖、資料健康摘要 | Phase 1 |
 | `src/marketlab/strategies/` | `Strategy` ABC + BuyAndHold / SmaCross(fast,slow) / Momentum(lookback,deadband) / MeanReversion(window,entry_z)；訊號 ∈ {−1,0,+1} | Phase 3 |
 | `src/marketlab/backtest/engine.py` | `run_backtest(prices, signals, config)`：下一根 K 執行、turnover 收 fee+slippage、產出 total/annualized return、Sharpe、max_drawdown、trades、exposure、total_cost | Phase 4 |
-| `tests/` | 41 個測試：regime 合成資料校準、schema 驗證、backtest 已知值、防 lookahead 回歸測試、OKX MockTransport | — |
+| `tests/` | 71 個測試：regime 合成校準、schema 驗證、backtest 已知值、防 lookahead 回歸、下載器分頁、資料層缺口、WS 重連流程 | — |
 | `Dockerfile`、`.github/workflows/ci.yml` | python:3.12-slim 映像；CI＝ruff＋pytest，Python 3.11/3.12 matrix | Phase 0 |
 
 ---
@@ -94,13 +109,17 @@ print(RuleBasedRegimeDetector().detect(k))
 
 ## 已知坑（踩過的）
 
-* **OKX candles 回傳 newest-first**，client 已排序成 ascending——別在別處再排一次。
-* `/api/v5/market/candles` 單次上限 **300** 根；更久歷史要用 `/api/v5/market/history-candles`
-  配 `after`/`before` 分頁（Phase 1 待辦）。
+* **OKX WS 雙端點**：candle 頻道在 `/ws/v5/business`（名稱預組合如 `candle5m`），
+  tickers/trades 在 `/ws/v5/public`。訂錯端點會回 error 60018。客戶端已自動分流。
+* **OKX REST 的 timestamp 是字串毫秒**——必須在 `_parse_candles` 統一轉 tz-aware UTC；
+  下游所有程式碼都假設已是 Timestamp。
+* `history-candles` 單次上限 **100** 根、`market/candles` 上限 300；分頁用 `after` 游標往過去走。
+* WS 心跳：伺服器會送文字 `"ping"`，要回 `"pong"`；閒置 >30s 斷線。客戶端每 20s 主動送 ping。
 * 年化報酬在「短視窗 × 極端報酬」會指數爆表：engine 已在 log 空間計算並 guard overflow（>709 → `inf`）。
-* Windows git 會印 `LF will be replaced by CRLF` 警告——已有 `.gitattributes` 正規化，可忽略。
+* Windows git 的 LF/CRLF 警告可忽略（`.gitattributes` 已正規化）。
 * Regime 合成測試（`tests/test_regime.py`）以固定 seed 校準閾值；
   改 detector 參數前先讀該檔的工程設計註記，避免誤判「測試壞了」。
+* PowerShell 多行 `python -c "…"` 內含 `{}` 會解析失敗——寫暫存腳本執行。
 * **Git 身份已設定**（repo-local：`xujunkai / 128728119+xujk0217@users.noreply.github.com`，
   noreply 格式會自動關聯 GitHub 帳號 xujk0217）。若在新機器 clone，請重新設定：
   ```powershell
@@ -111,19 +130,20 @@ print(RuleBasedRegimeDetector().detect(k))
 
 ## 下一步待辦（照 ROADMAP 順序）
 
-### Phase 1 — BTC Market Explorer
-- [ ] OKX WebSocket 公開頻道訂閱（`tickers` / `trades` / `candle5m`），斷線自動重連
-- [ ] 歷史 K 線下載腳本：`history-candles` 分頁 → `data/raw/*.parquet`（immutable）
-- [ ] Dashboard v1（先簡單：Streamlit 或 CLI 報表皆可，討論後再選）
+### Phase 3–4 補強
+- [ ] `backtest` CLI 子命令（策略×參數×區間 → metrics 表）
+- [ ] Portfolio / position sizing
 
-### Phase 2 — Historical Data 三層
-- [ ] Raw 層落盤格式與命名慣例（UTC、instId、interval）
-- [ ] Normalized 層：統一 schema + 缺口檢查
-- [ ] Feature 層：returns / realized vol / volume features（pandas 向量實作）
+### Phase 5 — Experiment Lab（下一個大目標）
+- [ ] Run metadata 記錄（dataset 版本、strategy 版本、參數、metrics、git sha）
+- [ ] 實驗比較報表（DataFrame/CSV 起步即可）
+
+### Dashboard v2 候選
+- [ ] 即時模式：dashboard 直接吃 WS tickers 更新價格卡
+- [ ] Regime 時間軸與 K 線圖疊加背景色帶
 
 ### 再之後
-Phase 3–4 已有基礎版（四策略＋回測引擎），接著補 CLI 入口與參數化；
-然後 Phase 5 Experiment Lab（run metadata + metrics 比較）。
+Phase 7 Strategy Arena（per-regime 績效矩陣）→ Phase 8 Event Data Infra。
 
 ---
 

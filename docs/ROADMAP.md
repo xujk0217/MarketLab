@@ -24,19 +24,19 @@ Repository / Python Core / Tests / Docker / CI / Docs
 - [x] 單元測試全綠
 - [x] Dockerfile + GitHub Actions CI
 
-## Phase 1 — BTC Market Explorer
+## Phase 1 — BTC Market Explorer ✅
 OKX Ticker / Trade / Candlestick → 第一版 Dashboard
 
-- [ ] OKX WebSocket 即時行情訂閱
-- [ ] 歷史 K 線下載腳本（分頁抓取至 parquet）
-- [ ] Dashboard v1（價格、K 線、最新成交）
+- [x] OKX WebSocket 即時行情訂閱（tickers/trades 走 public、candle 走 business 端點，自動重連＋心跳）
+- [x] 歷史 K 線下載腳本（history-candles 分頁抓取至 parquet Raw 層）
+- [x] Dashboard v1（Streamlit：K線圖、Regime 面板、Features 面板）
 
-## Phase 2 — Historical Data
+## Phase 2 — Historical Data ✅
 Raw / Normalized / Feature 三層資料
 
-- [ ] Raw 層：交易所原始格式落盤（immutable）
-- [ ] Normalized 層：統一 schema、UTC timestamp、缺口檢查
-- [ ] Feature 層：returns / volatility / volume features
+- [x] Raw 層：交易所原始格式落盤（immutable 批次檔，拒絕覆寫）
+- [x] Normalized 層：統一 schema、UTC timestamp、去重＋OHLC 驗證＋缺口報告
+- [x] Feature 層：log returns / realized vol / volume ratio / hl range / momentum lags
 
 ## Phase 3 — First Quant ✅（基礎版隨 Phase 0 先行落地）
 
