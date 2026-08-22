@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Data artifacts (raw market data must not pollute git history)
+data/raw/
+data/normalized/
+data/features/
+*.parquet
+*.feather
+*.duckdb
+*.db
+
+# Experiments / models
+experiments/runs/
+mlruns/
+models/*.pkl
+models/*.joblib
+
+# Environment / secrets
+.env
+.env.*
+*.key
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
