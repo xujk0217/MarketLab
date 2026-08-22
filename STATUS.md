@@ -11,9 +11,9 @@
 
 | 項目 | 狀態 |
 | --- | --- |
-| 目前階段 | **Phase 0 ✅ 1 ✅ 2 ✅ 5 ✅ 完成** |
-| 下一步 | Phase 7 Strategy Arena（per-regime 績效矩陣）；Dashboard 即時模式；backtest CLI 參數掃描 |
-| 測試 | `79 passed`（pytest） |
+| 目前階段 | **Phase 0 ✅ 1 ✅ 2 ✅ 5 ✅ 7 ✅ 完成** |
+| 下一步 | 更多歷史資料（arena 需長期多 regime 才有統計力）→ Phase 8 Event Data Infra；Dashboard 即時模式 |
+| 測試 | `89 passed`（pytest） |
 | Lint | `ruff check` All checks passed |
 | 實網驗證 | REST 分頁下載 2 天 1m K 線（2881 bars, 0 缺口）＋ WS 三頻道串流（ticker/trade/candle5m）＋ Streamlit 啟動 |
 | Git | branch `main` → `github.com/xujk0217/MarketLab`（帳號：gh CLI 已登入 xujk0217） |
@@ -132,20 +132,21 @@ print(RuleBasedRegimeDetector().detect(k))
 
 ## 下一步待辦（照 ROADMAP 順序）
 
-### Phase 7 — Strategy Arena v2（下一個大目標）
-- [ ] Per-regime 績效矩陣：把歷史切成 regime 區段，各策略分區計算 metrics（SPEC §27 表格自動產生）
+### 資料擴充（當前瓶頸）
+- [ ] 下載更長歷史（如 30 天 1m 或 90 天 5m）——目前 2 天幾乎全是 RANGE，Arena 無法呈現 TREND/BREAKOUT 差異
+- [ ] backtest/arena CLI 參數掃描（grid sweep → 多筆實驗一次入庫）
 
-### Phase 3–4 補強
-- [ ] backtest CLI 參數掃描（grid sweep → 多筆實驗一次入庫）
-- [ ] Portfolio / position sizing
+### Phase 8 — Event Data Infrastructure（下一個大目標）
+- [ ] News / Macro collector（只保存，不交易）
+- [ ] Source metadata（publish_time / url / source tier）
 
 ### Dashboard v2 候選
 - [ ] 即時模式：dashboard 直接吃 WS tickers 更新價格卡
 - [ ] Regime 時間軸與 K 線圖疊加背景色帶
-- [ ] 實驗比較頁（讀 experiments/runs 直接在 UI 比較）
+- [ ] 實驗比較頁與 Arena 矩陣頁
 
 ### 再之後
-Phase 8 Event Data Infra → Phase 9 LLM Event Intelligence。
+Phase 9 LLM Event Intelligence → Phase 10 Event Study。
 
 ---
 

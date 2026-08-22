@@ -60,10 +60,10 @@ Raw / Normalized / Feature 三層資料
 - [ ] EVENT_SHOCK 接上新聞事件分數（依賴 Phase 8–9）
 - [ ] Regime Dashboard
 
-## Phase 7 — Strategy Arena v2
+## Phase 7 — Strategy Arena v2 ✅
 按不同 Regime 比較 Strategy（非常重要）
 
-- [ ] Per-regime 績效矩陣（SPEC §27 表格自動產生）
+- [x] Per-regime 績效矩陣：`python -m marketlab arena`（分段標記**無 lookahead**——標籤只用段落之前的資料；同 regime 跨段複合＝「只在該 regime 交易」的組合貢獻）
 
 ## Phase 8 — Event Data Infrastructure
 
