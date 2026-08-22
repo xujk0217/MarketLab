@@ -42,6 +42,7 @@ from marketlab.data.store import (
     save_raw_batch,
 )
 from marketlab.experiments import ExperimentLab, run_backtest_experiment
+from marketlab.experiments.sweep import coerce_scalar, run_sweep, sweep_table
 from marketlab.features import FeatureConfig, build_features
 from marketlab.strategies import (
     BuyAndHold,
@@ -123,7 +124,24 @@ def _build_parser() -> argparse.ArgumentParser:
     ar.add_argument("--step", type=int, default=None, help="labeling step in bars")
     ar.add_argument("--fee", type=float, default=0.001)
     ar.add_argument("--slippage-bps", type=float, default=5.0)
+    ar.add_argument("--strategy", choices=sorted(STRATEGY_REGISTRY), default=None,
+                    help="run a single strategy instead of all four")
+    ar.add_argument("--param", action="append", default=[], metavar="KEY=VALUE",
+                    help="constructor parameter for --strategy (repeatable)")
     ar.set_defaults(func=_cmd_arena)
+
+    sw = sub.add_parser("sweep", help="parameter grid sweep -> experiment records")
+    sw.add_argument("--inst", default="BTC-USDT")
+    sw.add_argument("--bar", default="1m")
+    sw.add_argument("--days", type=float, default=None)
+    sw.add_argument("--strategy", required=True, choices=sorted(STRATEGY_REGISTRY))
+    sw.add_argument("--param", action="append", default=[], metavar="KEY=V1,V2,...",
+                    help="grid axis; comma-separated values (repeatable)")
+    sw.add_argument("--capital", type=float, default=10_000.0)
+    sw.add_argument("--fee", type=float, default=0.001)
+    sw.add_argument("--slippage-bps", type=float, default=5.0)
+    sw.add_argument("--group", required=True, help="shared tag for all combos")
+    sw.set_defaults(func=_cmd_sweep)
     return parser
 
 
@@ -206,7 +224,12 @@ def _cmd_arena(args: argparse.Namespace) -> None:
         bars_per_day = 86_400 / BAR_SECONDS[args.bar]
         candles_frame = candles_frame.tail(int(args.days * bars_per_day))
 
-    strategies = {name: cls() for name, cls in STRATEGY_REGISTRY.items()}
+    if args.strategy is not None:
+        strategies = {args.strategy: STRATEGY_REGISTRY[args.strategy](**_parse_params(args.param))}
+    else:
+        if args.param:
+            raise SystemExit("--param requires --strategy")
+        strategies = {name: cls() for name, cls in STRATEGY_REGISTRY.items()}
     config = BacktestConfig(fee_rate=args.fee, slippage_bps=args.slippage_bps)
     matrix, segments = arena(
         candles_frame,
@@ -228,15 +251,32 @@ def _cmd_arena(args: argparse.Namespace) -> None:
         print(matrix.to_string())
 
 
-def _coerce(value: str):
-    for cast in (int, float):
-        try:
-            return cast(value)
-        except ValueError:
-            continue
-    if value.lower() in ("true", "false"):
-        return value.lower() == "true"
-    return value
+def _cmd_sweep(args: argparse.Namespace) -> None:
+    candles_frame = load_normalized(args.inst, args.bar)
+    if args.days is not None:
+        bars_per_day = 86_400 / BAR_SECONDS[args.bar]
+        candles_frame = candles_frame.tail(int(args.days * bars_per_day))
+
+    strategy_cls = STRATEGY_REGISTRY[args.strategy]
+    grid = _parse_grid(args.param)
+    entries = run_sweep(
+        candles_frame,
+        strategy_cls,
+        grid,
+        inst_id=args.inst,
+        bar=args.bar,
+        config=BacktestConfig(
+            initial_capital=args.capital,
+            fee_rate=args.fee,
+            slippage_bps=args.slippage_bps,
+        ),
+        lab=ExperimentLab(),
+        group=args.group,
+    )
+    print(f"sweep '{args.group}': {len(entries)} combos on {len(candles_frame)} bars")
+    table = sweep_table(entries)
+    with pd.option_context("display.width", 200):
+        print(table.to_string(index=False))
 
 
 def _parse_params(pairs: list[str]) -> dict:
@@ -245,8 +285,19 @@ def _parse_params(pairs: list[str]) -> dict:
         key, sep, raw = pair.partition("=")
         if not sep:
             raise SystemExit(f"invalid --param {pair!r}; expected KEY=VALUE")
-        params[key.strip()] = _coerce(raw.strip())
+        params[key.strip()] = coerce_scalar(raw.strip())
     return params
+
+
+def _parse_grid(pairs: list[str]) -> dict[str, list]:
+    """--param window=20,30,60 --param entry_z=2  ->  cartesian axes."""
+    grid: dict[str, list] = {}
+    for pair in pairs:
+        key, sep, raw = pair.partition("=")
+        if not sep or not raw:
+            raise SystemExit(f"invalid --param {pair!r}; expected KEY=v1,v2,...")
+        grid[key.strip()] = [coerce_scalar(v) for v in raw.split(",")]
+    return grid
 
 
 def _cmd_backtest(args: argparse.Namespace) -> None:

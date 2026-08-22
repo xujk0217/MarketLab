@@ -138,7 +138,7 @@ print(RuleBasedRegimeDetector().detect(k))
 - [ ] Source metadata（publish_time / url / source tier）
 
 ### 研究工具補強
-- [ ] backtest/arena CLI 參數掃描（grid sweep → 多筆實驗一次入庫）
+- [x] backtest/arena CLI 參數掃描（`marketlab sweep`；arena 支援 `--strategy/--param` 單策略模式）
 - [ ] Arena 統計力：段數太少時顯示警告（目前 BREAKOUT 僅 2 段）
 
 ### Dashboard v2 候選
