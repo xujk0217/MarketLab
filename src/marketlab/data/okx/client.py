@@ -67,19 +67,36 @@ class OKXPublicClient:
         self,
         inst_id: str = "BTC-USDT",
         bar: str = DEFAULT_BAR,
-        limit: int = 100,
+        limit: int = 300,
     ) -> pd.DataFrame:
-        """OHLCV candles as an ascending-time DataFrame."""
+        """Most recent OHLCV candles (max 300) as an ascending-time DataFrame."""
         payload = self._get(
             "/api/v5/market/candles",
             {"instId": inst_id, "bar": bar, "limit": limit},
         )
-        rows = payload["data"]  # OKX returns newest-first
-        frame = pd.DataFrame(rows, columns=_CANDLE_COLUMNS)
-        numeric = ["open", "high", "low", "close", "volume"]
-        frame[numeric] = frame[numeric].astype(float)
-        frame["confirmed"] = frame["confirmed"].astype(int)
-        return frame.sort_values("timestamp", ignore_index=True)
+        return _parse_candles(payload["data"])
+
+    def get_history_candles(
+        self,
+        inst_id: str = "BTC-USDT",
+        bar: str = DEFAULT_BAR,
+        after: int | None = None,
+        before: int | None = None,
+        limit: int = 100,
+    ) -> pd.DataFrame:
+        """Older OHLCV candles for pagination (max 100 per request).
+
+        ``after``/``before`` are epoch milliseconds. With ``after`` set, OKX
+        returns records **older** than that timestamp — the cursor used by
+        ``marketlab.data.okx.history.HistoryDownloader``.
+        """
+        params: dict[str, Any] = {"instId": inst_id, "bar": bar, "limit": limit}
+        if after is not None:
+            params["after"] = str(int(after))
+        if before is not None:
+            params["before"] = str(int(before))
+        payload = self._get("/api/v5/market/history-candles", params)
+        return _parse_candles(payload["data"])
 
     def get_trades(
         self,
@@ -120,6 +137,16 @@ class OKXPublicClient:
         if not body.get("data"):
             raise OKXError(f"OKX returned empty data for {path}")
         return body
+
+
+def _parse_candles(rows: list[list[str]]) -> pd.DataFrame:
+    """Parse OKX candle rows (newest-first) into an ascending-time frame."""
+    frame = pd.DataFrame(rows, columns=_CANDLE_COLUMNS)
+    frame["timestamp"] = frame["timestamp"].map(_ms_to_timestamp)
+    numeric = ["open", "high", "low", "close", "volume"]
+    frame[numeric] = frame[numeric].astype(float)
+    frame["confirmed"] = frame["confirmed"].astype(int)
+    return frame.sort_values("timestamp", ignore_index=True)
 
 
 def _ms_to_timestamp(ms: str | int) -> pd.Timestamp:
