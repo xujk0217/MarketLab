@@ -49,6 +49,7 @@ docs/
 
 - [規格書 v0.2](docs/SPEC.md) — 42 節完整需求
 - [路線圖](docs/ROADMAP.md) — Phase 0–25 進度追蹤
+- [開發狀態與交接](STATUS.md) — 給下一個開發者／AI Agent 的現況快照（**每次改動後更新**）
 
 ## License
 
