@@ -1,0 +1,53 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "marketlab"
+version = "0.1.0"
+description = "Open-source event-aware market digital twin & AI quantitative research platform (BTC-USDT x OKX)"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "MarketLab contributors" }]
+requires-python = ">=3.11"
+keywords = ["quant", "bitcoin", "okx", "digital-twin", "backtest", "llm", "trading-research"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial :: Investment",
+]
+dependencies = [
+    "httpx>=0.27",
+    "numpy>=1.26",
+    "pandas>=2.1",
+    "pydantic>=2.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.4",
+]
+
+[project.urls]
+Homepage = "https://github.com/marketlab/marketlab"
+Documentation = "https://github.com/marketlab/marketlab/tree/main/docs"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/marketlab"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
