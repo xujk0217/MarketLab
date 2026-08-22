@@ -1,0 +1,7 @@
+# Streamlit project defaults: auto-open the browser, no usage telemetry.
+[browser]
+gatherUsageStats = false
+
+[server]
+headless = false
+port = 8501

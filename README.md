@@ -34,8 +34,8 @@ python -m marketlab normalize --inst BTC-USDT --bar 1m
 python -m marketlab report --inst BTC-USDT --bar 1m
 python -m marketlab live --seconds 10          # WebSocket 即時串流
 
-# Dashboard v1（Streamlit）
-streamlit run app/dashboard.py
+# Dashboard v1（Streamlit）— 一鍵啟動，自動開瀏覽器
+.\run_dashboard.ps1
 ```
 
 ## 專案結構

@@ -42,8 +42,9 @@
 .venv\Scripts\python -m marketlab report --inst BTC-USDT --bar 1m
 .venv\Scripts\python -m marketlab live --seconds 10     # WS 三頻道即時串流
 
-# Dashboard（從 repo 根目錄執行；需先有 normalized 資料）
-.venv\Scripts\streamlit run app/dashboard.py
+# Dashboard（一鍵啟動；從任何目錄都可以）
+.\run_dashboard.ps1        # 或在檔案總管右鍵 -> 以 PowerShell 執行
+# 背後等價指令：streamlit run app/dashboard.py（需從 repo 根目錄執行）
 ```
 
 ---
