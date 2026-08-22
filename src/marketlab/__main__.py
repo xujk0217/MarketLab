@@ -113,6 +113,17 @@ def _build_parser() -> argparse.ArgumentParser:
     exp.add_argument("--sort", default="sharpe")
     exp.add_argument("--last", type=int, default=20, help="show at most N rows")
     exp.set_defaults(func=_cmd_experiments)
+
+    ar = sub.add_parser("arena", help="strategy x regime performance matrix (SPEC §27)")
+    ar.add_argument("--inst", default="BTC-USDT")
+    ar.add_argument("--bar", default="1m")
+    ar.add_argument("--days", type=float, default=None)
+    ar.add_argument("--metric", default="total_return",
+                    choices=["total_return", "sharpe", "max_drawdown"])
+    ar.add_argument("--step", type=int, default=None, help="labeling step in bars")
+    ar.add_argument("--fee", type=float, default=0.001)
+    ar.add_argument("--slippage-bps", type=float, default=5.0)
+    ar.set_defaults(func=_cmd_arena)
     return parser
 
 
@@ -183,6 +194,38 @@ def _cmd_live(args: argparse.Namespace) -> None:
         asyncio.run(client.run(duration=args.seconds))
     finally:
         print("done")
+
+
+def _cmd_arena(args: argparse.Namespace) -> None:
+    from collections import Counter
+
+    from marketlab.arena import arena
+
+    candles_frame = load_normalized(args.inst, args.bar)
+    if args.days is not None:
+        bars_per_day = 86_400 / BAR_SECONDS[args.bar]
+        candles_frame = candles_frame.tail(int(args.days * bars_per_day))
+
+    strategies = {name: cls() for name, cls in STRATEGY_REGISTRY.items()}
+    config = BacktestConfig(fee_rate=args.fee, slippage_bps=args.slippage_bps)
+    matrix, segments = arena(
+        candles_frame,
+        strategies,
+        config=config,
+        step=args.step,
+        metric=args.metric,
+    )
+
+    distribution = Counter(s.regime.value for s in segments)
+    print(f"=== Strategy Arena: {args.inst} {args.bar} "
+          f"({len(candles_frame)} bars, metric={args.metric}) ===")
+    print("regime segments: " + ", ".join(
+        f"{regime} x{count}" for regime, count in sorted(distribution.items())
+    ))
+    if args.metric == "total_return":
+        matrix = matrix.map(lambda v: v if pd.isna(v) else f"{v:+.2%}")
+    with pd.option_context("display.width", 200):
+        print(matrix.to_string())
 
 
 def _coerce(value: str):
