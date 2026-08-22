@@ -48,11 +48,11 @@ Raw / Normalized / Feature 三層資料
 - [x] Position-based 引擎：Fee / Slippage / PnL / MaxDrawdown / Sharpe
 - [ ] Portfolio 多標的支援、position sizing
 
-## Phase 5 — Experiment Lab
+## Phase 5 — Experiment Lab ✅
 參考 Qlib：Dataset/Strategy 版本、參數、Metrics、Experiment Comparison
 
-- [ ] 實驗記錄（run metadata + metrics）
-- [ ] 實驗比較報表
+- [x] 實驗記錄（run metadata：dataset 指紋＋範圍、strategy 參數、cost config、metrics、git sha、版本）
+- [x] 實驗比較報表（`python -m marketlab experiments`，依 sharpe 排序、可 group 過濾）
 
 ## Phase 6 — Market Regime v1 ✅（rule-based 核心隨 Phase 0 先行落地）
 

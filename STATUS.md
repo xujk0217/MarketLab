@@ -11,9 +11,9 @@
 
 | 項目 | 狀態 |
 | --- | --- |
-| 目前階段 | **Phase 0 ✅ Phase 1 ✅ Phase 2 ✅ 完成** |
-| 下一步 | Phase 5 Experiment Lab（實驗記錄/比較）；Dashboard 接即時 WS；Phase 7 per-regime 績效矩陣 |
-| 測試 | `71 passed`（pytest） |
+| 目前階段 | **Phase 0 ✅ 1 ✅ 2 ✅ 5 ✅ 完成** |
+| 下一步 | Phase 7 Strategy Arena（per-regime 績效矩陣）；Dashboard 即時模式；backtest CLI 參數掃描 |
+| 測試 | `79 passed`（pytest） |
 | Lint | `ruff check` All checks passed |
 | 實網驗證 | REST 分頁下載 2 天 1m K 線（2881 bars, 0 缺口）＋ WS 三頻道串流（ticker/trade/candle5m）＋ Streamlit 啟動 |
 | Git | branch `main` → `github.com/xujk0217/MarketLab`（帳號：gh CLI 已登入 xujk0217） |
@@ -62,7 +62,8 @@
 | `src/marketlab/features/` | `build_features()`：log_return、realized_vol、volume_ratio、hl_range_pct、return_lag{N}（純 trailing window，無 lookahead） | Phase 2 |
 | `src/marketlab/data/okx/ws.py` | `OKXWebSocketClient`：**雙端點並行**——tickers/trades 走 `/ws/v5/public`、candle 走 `/ws/v5/business`（預組合名稱如 `candle5m`）；指數退避重連＋20s 心跳；連線工廠可注入離線測試 | Phase 1 |
 | `src/marketlab/__main__.py` | CLI 子命令：`download / normalize / report / live`（argparse） | Phase 1 |
-| `app/dashboard.py` | Streamlit Dashboard v1：K線＋成交量圖、Regime 卡片與滾動時間軸、Features 線圖、資料健康摘要 | Phase 1 |
+| `src/marketlab/experiments/` | `ExperimentLab`：每筆回測存成不可變 JSON（dataset 指紋/範圍、strategy 參數、cost config、metrics、git sha）；`compare()` 產出比較表 | Phase 5 |
+| `app/dashboard.py` | Streamlit Dashboard v1：K線＋成交量圖、Regime 卡片與滾動時間軸、Features 線圖、資料健康摘要；`run_dashboard.ps1` 一鍵啟動 | Phase 1 |
 | `src/marketlab/strategies/` | `Strategy` ABC + BuyAndHold / SmaCross(fast,slow) / Momentum(lookback,deadband) / MeanReversion(window,entry_z)；訊號 ∈ {−1,0,+1} | Phase 3 |
 | `src/marketlab/backtest/engine.py` | `run_backtest(prices, signals, config)`：下一根 K 執行、turnover 收 fee+slippage、產出 total/annualized return、Sharpe、max_drawdown、trades、exposure、total_cost | Phase 4 |
 | `tests/` | 71 個測試：regime 合成校準、schema 驗證、backtest 已知值、防 lookahead 回歸、下載器分頁、資料層缺口、WS 重連流程 | — |
@@ -131,20 +132,20 @@ print(RuleBasedRegimeDetector().detect(k))
 
 ## 下一步待辦（照 ROADMAP 順序）
 
-### Phase 3–4 補強
-- [ ] `backtest` CLI 子命令（策略×參數×區間 → metrics 表）
-- [ ] Portfolio / position sizing
+### Phase 7 — Strategy Arena v2（下一個大目標）
+- [ ] Per-regime 績效矩陣：把歷史切成 regime 區段，各策略分區計算 metrics（SPEC §27 表格自動產生）
 
-### Phase 5 — Experiment Lab（下一個大目標）
-- [ ] Run metadata 記錄（dataset 版本、strategy 版本、參數、metrics、git sha）
-- [ ] 實驗比較報表（DataFrame/CSV 起步即可）
+### Phase 3–4 補強
+- [ ] backtest CLI 參數掃描（grid sweep → 多筆實驗一次入庫）
+- [ ] Portfolio / position sizing
 
 ### Dashboard v2 候選
 - [ ] 即時模式：dashboard 直接吃 WS tickers 更新價格卡
 - [ ] Regime 時間軸與 K 線圖疊加背景色帶
+- [ ] 實驗比較頁（讀 experiments/runs 直接在 UI 比較）
 
 ### 再之後
-Phase 7 Strategy Arena（per-regime 績效矩陣）→ Phase 8 Event Data Infra。
+Phase 8 Event Data Infra → Phase 9 LLM Event Intelligence。
 
 ---
 
