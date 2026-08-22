@@ -11,8 +11,9 @@
 
 | 項目 | 狀態 |
 | --- | --- |
-| 目前階段 | **Phase 0 ✅ 1 ✅ 2 ✅ 5 ✅ 7 ✅ 完成** |
-| 下一步 | 更多歷史資料（arena 需長期多 regime 才有統計力）→ Phase 8 Event Data Infra；Dashboard 即時模式 |
+| 目前階段 | **Phase 0 ✅ 1 ✅ 2 ✅ 5 ✅ 7 ✅ 完成**；資料瓶頸已解除 |
+| 資料庫存 | 90d×1H（2160 bars）、30d×5m（8640 bars）、2d×1m（2881 bars），全部 0 缺口 |
+| 下一步 | Phase 8 Event Data Infra（LLM 層地基）；backtest/arena 參數掃描；Dashboard 即時模式 |
 | 測試 | `89 passed`（pytest） |
 | Lint | `ruff check` All checks passed |
 | 實網驗證 | REST 分頁下載 2 天 1m K 線（2881 bars, 0 缺口）＋ WS 三頻道串流（ticker/trade/candle5m）＋ Streamlit 啟動 |
@@ -132,13 +133,13 @@ print(RuleBasedRegimeDetector().detect(k))
 
 ## 下一步待辦（照 ROADMAP 順序）
 
-### 資料擴充（當前瓶頸）
-- [ ] 下載更長歷史（如 30 天 1m 或 90 天 5m）——目前 2 天幾乎全是 RANGE，Arena 無法呈現 TREND/BREAKOUT 差異
-- [ ] backtest/arena CLI 參數掃描（grid sweep → 多筆實驗一次入庫）
-
 ### Phase 8 — Event Data Infrastructure（下一個大目標）
 - [ ] News / Macro collector（只保存，不交易）
 - [ ] Source metadata（publish_time / url / source tier）
+
+### 研究工具補強
+- [ ] backtest/arena CLI 參數掃描（grid sweep → 多筆實驗一次入庫）
+- [ ] Arena 統計力：段數太少時顯示警告（目前 BREAKOUT 僅 2 段）
 
 ### Dashboard v2 候選
 - [ ] 即時模式：dashboard 直接吃 WS tickers 更新價格卡
@@ -147,6 +148,7 @@ print(RuleBasedRegimeDetector().detect(k))
 
 ### 再之後
 Phase 9 LLM Event Intelligence → Phase 10 Event Study。
+研究發現請記錄到 docs/RESEARCH_LOG.md。
 
 ---
 
