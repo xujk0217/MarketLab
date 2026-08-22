@@ -1,0 +1,13 @@
+# Normalize line endings across platforms; git stores LF.
+* text=auto
+
+# Source code always LF
+*.py text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.md text eol=lf
+
+# Data binaries never diffed
+*.parquet binary
+*.feather binary
